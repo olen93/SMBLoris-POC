@@ -239,7 +239,6 @@ int main(int argc, char **argv)
             sent_packets++;
             if (sent_packets % 100 == 0) {
                 fprintf(stderr, "\r%d sent, %d errors, %d replies", sent_packets, errors, replies);
-                send_arp(src);
             }
             if (sent_packets % 1000 == 0) {
                 send_arp(src);
