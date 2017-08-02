@@ -248,7 +248,7 @@ int main(int argc, char **argv)
             }
             sent_packets++;
             if (sent_packets % 100 == 0) {
-                fprintf(stderr, "\r%08x:%02x %d sent, %d errors (%d), %d replies, %d resets", src, port, sent_packets, errors, last_errno, replies, rsts);
+                fprintf(stderr, "\r%08x:%04x %d sent, %d errors (%d), %d replies, %d resets", src, port, sent_packets, errors, last_errno, replies, rsts);
                 send_arp(src);
             }
             process_replies(sock, rsock);
