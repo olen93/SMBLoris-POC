@@ -38,8 +38,6 @@ struct {
     struct sockaddr_in dst_sa;
 } cfg;
 
-int sock;
-
 static void usage(const char *argv0) {
     fprintf(stderr, "Usage: %s <iface> <src_ip_start> <src_ip_end> <dst_ip>\n", argv0);
     exit(1);
